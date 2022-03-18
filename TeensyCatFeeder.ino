@@ -1,16 +1,39 @@
+#include <EEPROM.h>
 #include <TimeLib.h>
+#include <Servo.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
+#include <EEPROM.h>
 
 #define SCREEN_WIDTH  128 // pixels
 #define SCREEN_HEIGHT  32 
 #define PRESS_TIME   1000 // milliseconds
 #define BUTTON         17 // GPIO
 #define MAGNET          3
+#define SHOULDER        0 //array index
+#define ELBOW           1
+#define WRIST           2
   
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1, 1000000);
+struct Prefs {
+  int wrist_top;
+  int elbow_top;
+  int shoulder_side;
+  int shoulder_front;
+  int jiggles;
+  int wake;
+};
+Prefs prefs = { 2500, 2250, 500, 1400, 3, 5 };
 
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1, 1000000);
+Servo shoulderServo;
+Servo elbowServo;
+Servo wristServo;
+Servo servoMotor[] = {shoulderServo, elbowServo, wristServo};
+
+int servoPins[]    = {7, 6, 5};
+String servoNames[] = {"Shoulder", "Elbow", "Wrist"};
+bool servosOn = false;
 int cursorPos = 130; //just offscreen
 int lastButtonState = LOW;
 int thisButtonState;
@@ -33,17 +56,9 @@ void toggleMagnet(int valu) {
   Serial.printf("Reset magnet to %d\n", isLocked);
 }
 
-void openLid(bool jiggle) {
-  Serial.printf("Opening lid with jiggle=%d\n", jiggle);
-  toggleMagnet(0);
-  delay(50);
-  //moveElbowWrist(servoTop);
-  //if (jiggle) jiggleShoulder();
-  //killServos();
-}
-
 void setup()  {
   Serial.begin(9600);
+  loadPreferences(true);
   pinMode(BUTTON, INPUT_PULLUP);
   pinMode(MAGNET, OUTPUT);
   toggleMagnet(0);
@@ -90,7 +105,7 @@ void loop() {
   drawWake();
   display.display();
 
-  //manually seet time at serial terminal    
+  //manually set time at serial terminal    
   if (Serial.available()) {
     String cmd = Serial.readString();
     int yr = cmd.substring(0,4).toInt();
