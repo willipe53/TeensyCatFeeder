@@ -15,7 +15,7 @@ void loadPreferences(bool prefsExist) {
 }
 
 void writeCurrentValsToPrefs() {
-  Serial.printf("Rewriting default values\n");
+  Serial.println("Rewriting default values");
   prefs.servoTop         = servoTop;
   prefs.servoBottom      = servoBottom;
   prefs.servoMiddle      = servoMiddle;
@@ -28,6 +28,7 @@ void writeCurrentValsToPrefs() {
 
 void printValues() {
   Serial.println();
+  Serial.println("Code based on https://github.com/willipe53/TeensyCatFeeder");
   Serial.printf("Servos on:%d\n", servosOn);
   Serial.printf("Time set mode:%d {TS_NONE, TS_HOUR, TS_MIN, TS_WAKE}\n", timeSetMode);
   Serial.printf("Is locked:%d\n", isLocked);
@@ -43,7 +44,7 @@ void printValues() {
   Serial.printf("Current time: %04d%02d%02d%02d%02d\n", year(), month(), day(), hour(), minute());
   Serial.printf("Number of jiggles: %d\n", jiggleTimes);    
   Serial.println();
-  Serial.printf("Available serial commands:\n");  
+  Serial.println("Available serial commands:");  
   for (unsigned int i=0; i<inputChars.length(); i++) {    
     String key = inputChars.substring(i,i+1);
     Serial.printf("  %s - %s\n", key.c_str(), outputNames[i].c_str());  

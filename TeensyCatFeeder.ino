@@ -21,7 +21,7 @@
 #define DIM_SCREEN     10 //after 10 seconds
  
 //default servo positions
-int servoTop         = 2500;
+int servoTop         = 2500; //milliseconds
 int servoBottom      = 1400;
 int servoMiddle      = 1400;
 int servoSide        =  500;
@@ -46,21 +46,21 @@ Servo elbowServo;
 Servo wristServo;
 Servo servoMotor[] = {shoulderServo, elbowServo, wristServo};
 
-int servoPins[]    = {7, 6, 5};
+int servoPins[]     = {7, 6, 5};
 String servoNames[] = {"Shoulder", "Elbow", "Wrist"};
-bool servosOn = false;
+char lastTimeStr[128];
 int cursorPos = 130; //just offscreen
 int lastButtonState = LOW;
 int thisButtonState;
+int timeSetMode = TS_NONE;
 unsigned long pressedTime  = 0;
 unsigned long releasedTime = 0;
+unsigned long sleepDisplayAt;
+bool servosOn = false;
 bool isPressing = false;
 bool isLongDetected = false;
-int timeSetMode = TS_NONE;
-char lastTimeStr[128];
 bool isLocked = false;
 bool displayAwake = true;
-unsigned long sleepDisplayAt;
 bool doneForToday = false;
 
 String inputChars = "olsewjtcbp";
@@ -136,6 +136,23 @@ int getWakeMin() {
   return (wakeTime % 100);
 }
 
+void advanceDigit() {
+  if (timeSetMode == TS_HOUR) {
+    int hr = hour() + 1;
+    if (hr > 24) hr = 1;
+    setTime(hr,minute(),0,day(),month(),year());
+  } else if (timeSetMode == TS_MIN) {
+    int mn = minute() + 1;
+    if (mn > 59) mn = 0;
+    setTime(hour(),mn,0,day(),month(),year());
+  } else if (timeSetMode == TS_WAKE) {
+    int wake = getWakeHour() + 1;
+    if (wake > 24) wake = 1;
+    saveWakeTime(wake*100);  
+  }
+  Serial.printf("Advancing the setting under the cursor for time item %d.", timeSetMode);
+}
+
 void setup()  {
   Serial.begin(9600);
   loadPreferences(true);
@@ -145,7 +162,6 @@ void setup()  {
     pinMode(servoPins[i], OUTPUT);
     digitalWrite(servoPins[i], 0);
   }
-  //initServos();
   toggleMagnet(0);
   setSyncProvider(getTeensy3Time);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -159,7 +175,7 @@ void loop() {
   //see if it is time to open the arm
   if (isWakeupTime()) openLid();
 
-  //advance to tomorrow
+  //advance to tomorrow, if an hour past since last feeding
   if (doneForToday && (hour() >= getWakeHour()+1)) doneForToday = false;
   
   //turn off display to avoid burn in
@@ -178,7 +194,7 @@ void loop() {
     if (pressDuration < PRESS_TIME) {
       Serial.println("A short press is detected");
       if (!displayAwake) startDisplayDimmerTimer();
-      else if (timeSetMode > TS_NONE) Serial.printf("Advancing the setting under the cursor for time item %d.", timeSetMode);
+      else if (timeSetMode > TS_NONE) advanceDigit();
       else if (isLocked) openLid();
       else toggleMagnet(1);
     }

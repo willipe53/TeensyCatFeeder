@@ -41,5 +41,13 @@ void drawWake() {
   display.setCursor(20, 22);
   display.print("Next food at ");
   if (timeSetMode == TS_WAKE) display.setTextColor((second() % 2) ? BLACK : WHITE);
-  display.print("5AM");
+  int wake = getWakeHour();
+  if (wake > 12) {
+    wake -= 12;
+    display.print(wake);
+    display.print("PM");
+  } else {
+    display.print(wake);
+    display.print("AM");    
+  }
 }
