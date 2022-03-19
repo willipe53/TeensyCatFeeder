@@ -15,19 +15,19 @@
 #define ELBOW           1
 #define WRIST           2
 #define TS_NONE         0
-#define TS_HOUR         1
-#define TS_MIN          2
-#define TS_WAKE         3
-#define DIM_SCREEN     10 //after 10 seconds
+#define TS_WAKE         1
+#define TS_HOUR         2
+#define TS_MIN          3
+#define DIM_SCREEN     20 //after 20 seconds
  
-//default servo positions
+//default preferences
 int servoTop         = 2500; //milliseconds
 int servoBottom      = 1400;
 int servoMiddle      = 1400;
 int servoSide        =  500;
 int servoElbowOffset =  250;
 int jiggleTimes      =    3;
-int wakeTime         =  500; //5AM
+int wakeTime         =  500; //5AM, wake time of 0 means vacation mode, no feeding
 
 struct Prefs {
   int servoTop;
@@ -70,7 +70,7 @@ String outputNames[] = {"Open the lid",                            //o
                         "Move elbow to x",                         //e
                         "Move wrist to x",                         //w
                         "Save number of jiggles to x",             //j
-                        "Save wake time as x (HHMM)"         ,     //t
+                        "Save wake time as x (HHMM) - 0 = off",    //t
                         "Save clock time as x (YYYYMMDDHHMM))",    //c
                         "Save as new open",                        //b
                         "Print all values"};                       //p
@@ -121,6 +121,7 @@ void toggleMagnet(int valu) {
 }
 
 bool isWakeupTime() {
+  if (wakeTime == 0) return false;
   if ((hour() == getWakeHour()) && (minute() >= getWakeMin()) && (doneForToday == false)) {
     doneForToday = true;
     return true;
@@ -147,7 +148,7 @@ void advanceDigit() {
     setTime(hour(),mn,0,day(),month(),year());
   } else if (timeSetMode == TS_WAKE) {
     int wake = getWakeHour() + 1;
-    if (wake > 24) wake = 1;
+    if (wake > 24) wake = 0;
     saveWakeTime(wake*100);  
   }
   Serial.printf("Advancing the setting under the cursor for time item %d.", timeSetMode);
@@ -216,9 +217,9 @@ void loop() {
 
   //drive display
   display.clearDisplay();
-  drawTime();
   drawLock();
   drawWake();
+  drawTime();
   display.display();
 
   //manual testing

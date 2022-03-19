@@ -1,11 +1,32 @@
 void drawLock() {
   if (!displayAwake) return;
-  display.fillRoundRect(0, 17, 15, 15, 3, WHITE);
+  display.fillRoundRect(0, 5, 15, 15, 3, WHITE);
   if (isLocked) {
-    display.drawCircle(7, 16, 4, WHITE);
+    display.drawCircle(7, 4, 4, WHITE);
   } else {
-    display.drawCircle(15, 16, 4, WHITE);
-    display.fillRect(15, 17, 6, 10, BLACK);    
+    display.drawCircle(15, 4, 4, WHITE);
+    display.fillRect(15, 5, 6, 10, BLACK);    
+  }
+}
+
+void drawWake() {
+  if (!displayAwake) return;
+  display.setTextColor(WHITE);
+  display.setCursor(20, 8);
+  if (wakeTime == 0) {
+    display.print("Vacation mode");
+  } else {
+    display.print("Next food at ");
+    if (timeSetMode == TS_WAKE) display.setTextColor((second() % 2) ? BLACK : WHITE);
+    int wake = getWakeHour();
+    if (wake > 12) {
+      wake -= 12;
+      display.print(wake);
+      display.print("PM");
+    } else {
+      display.print(wake);
+      display.print("AM");    
+    }
   }
 }
 
@@ -18,7 +39,7 @@ void drawTime() {
   uint16_t w, h;
   if (strcmp(lastTimeStr, timeStr) == 0) return;
   display.getTextBounds(timeStr, 0, 0, &x1, &y1, &w, &h);
-  display.setCursor((128-w)/2, 0);
+  display.setCursor((128-w)/2, 22);
   if (timeSetMode == TS_HOUR) display.setTextColor((second() % 2) ? BLACK : WHITE);
   display.print(hourFormat12());
   display.setTextColor(WHITE);
@@ -33,21 +54,4 @@ void drawTime() {
   if (timeSetMode == TS_HOUR) display.setTextColor((second() % 2) ? BLACK : WHITE);
   display.print((isAM() ? "AM" : "PM"));
   //display.print(timeStr);  
-}
-
-void drawWake() {
-  if (!displayAwake) return;
-  display.setTextColor(WHITE);
-  display.setCursor(20, 22);
-  display.print("Next food at ");
-  if (timeSetMode == TS_WAKE) display.setTextColor((second() % 2) ? BLACK : WHITE);
-  int wake = getWakeHour();
-  if (wake > 12) {
-    wake -= 12;
-    display.print(wake);
-    display.print("PM");
-  } else {
-    display.print(wake);
-    display.print("AM");    
-  }
 }

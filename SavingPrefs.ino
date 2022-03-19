@@ -1,7 +1,7 @@
 void loadPreferences(bool prefsExist) {
   EEPROM.get(0, prefs);
-  if (prefs.wakeTime <= 0) {
-    Serial.printf("Detected 0 for wake...\n");
+  if (prefs.servoTop <= 0) {
+    Serial.printf("Detected 0 for servo top...\n");
     prefsExist = false;
   }
   if (!prefsExist) writeCurrentValsToPrefs();
@@ -40,7 +40,7 @@ void printValues() {
   Serial.printf("Middle (Shoulder): %d\n", servoMiddle);    
   Serial.printf("Side (Shoulder): %d\n", servoSide);    
   Serial.printf("Elbow Offset (Wrist - Elbow): %d\n", servoElbowOffset);    
-  Serial.printf("Wake time: %d (%02d:%02d)\n", wakeTime, getWakeHour(), getWakeMin());    
+  Serial.printf("Wake time: %d (%02d:%02d)\n", wakeTime, getWakeHour(), getWakeMin());
   Serial.printf("Current time: %04d%02d%02d%02d%02d\n", year(), month(), day(), hour(), minute());
   Serial.printf("Number of jiggles: %d\n", jiggleTimes);    
   Serial.println();
