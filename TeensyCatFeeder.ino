@@ -14,7 +14,12 @@
 #define SHOULDER        0 //array index
 #define ELBOW           1
 #define WRIST           2
-  
+#define TS_NONE         0
+#define TS_HOUR         1
+#define TS_MIN          2
+#define TS_WAKE         3
+#define DIM_SCREEN     10 //after 10 seconds
+ 
 //default servo positions
 int servoTop         = 2500;
 int servoBottom      = 1400;
@@ -22,7 +27,7 @@ int servoMiddle      = 1400;
 int servoSide        =  500;
 int servoElbowOffset =  250;
 int jiggleTimes      =    3;
-int wakeHour         =    5;
+int wakeTime         =  500; //5AM
 
 struct Prefs {
   int servoTop;
@@ -31,7 +36,7 @@ struct Prefs {
   int servoSide;
   int servoElbowOffset;
   int jiggleTimes;
-  int wakeHour;
+  int wakeTime;
 };
 Prefs prefs;
 
@@ -51,10 +56,12 @@ unsigned long pressedTime  = 0;
 unsigned long releasedTime = 0;
 bool isPressing = false;
 bool isLongDetected = false;
-int timeSetMode = 0;
+int timeSetMode = TS_NONE;
 char lastTimeStr[128];
 bool isLocked = false;
-String dow[] = {"","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"};
+bool displayAwake = true;
+unsigned long sleepDisplayAt;
+bool doneForToday = false;
 
 String inputChars = "olsewjtcbp";
 String outputNames[] = {"Open the lid",                            //o
@@ -63,7 +70,7 @@ String outputNames[] = {"Open the lid",                            //o
                         "Move elbow to x",                         //e
                         "Move wrist to x",                         //w
                         "Save number of jiggles to x",             //j
-                        "Save wake time as x (24 hour clock)",     //t
+                        "Save wake time as x (HHMM)"         ,     //t
                         "Save clock time as x (YYYYMMDDHHMM))",    //c
                         "Save as new open",                        //b
                         "Print all values"};                       //p
@@ -84,6 +91,12 @@ void processCommand(String cmd) {
   else if (key.equals("b")) saveNewOpenPosition();   
   else if (key.equals("p")) printValues();            
   else Serial.printf("Unrecognized input: no values will be changed\n");
+}
+
+void startDisplayDimmerTimer() {
+  sleepDisplayAt = millis() + (DIM_SCREEN * 1000); 
+  displayAwake = true;
+  Serial.printf("Now: %d, sleep set for: %d\n", millis(), sleepDisplayAt);
 }
 
 void resetClockTo(int valu) {
@@ -107,21 +120,52 @@ void toggleMagnet(int valu) {
   Serial.printf("Reset magnet to %d\n", isLocked);
 }
 
+bool isWakeupTime() {
+  if ((hour() == getWakeHour()) && (minute() >= getWakeMin()) && (doneForToday == false)) {
+    doneForToday = true;
+    return true;
+  }
+  return false;
+}
+
+int getWakeHour() {
+  return (wakeTime / 100);
+}
+
+int getWakeMin() {
+  return (wakeTime % 100);
+}
+
 void setup()  {
   Serial.begin(9600);
   loadPreferences(true);
   pinMode(BUTTON, INPUT_PULLUP);
   pinMode(MAGNET, OUTPUT);
+  for (int i=0; i<3; i++) {
+    pinMode(servoPins[i], OUTPUT);
+    digitalWrite(servoPins[i], 0);
+  }
+  //initServos();
   toggleMagnet(0);
   setSyncProvider(getTeensy3Time);
-  Serial.println("Please enter time in the form of YYYYMMDD HH:MM[AM|PM], e.g. 20200317 11:41AM");
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.setTextSize(1);
   display.setTextColor(WHITE);
+  printValues();
+  startDisplayDimmerTimer();
 }
 
 void loop() {
-   //check button
+  //see if it is time to open the arm
+  if (isWakeupTime()) openLid();
+
+  //advance to tomorrow
+  if (doneForToday && (hour() >= getWakeHour()+1)) doneForToday = false;
+  
+  //turn off display to avoid burn in
+  if (millis() > sleepDisplayAt) displayAwake = false;
+  
+  //check button
   thisButtonState = digitalRead(BUTTON);
   if (lastButtonState == HIGH && thisButtonState == LOW) {        // button is pressed
     pressedTime = millis();
@@ -133,7 +177,8 @@ void loop() {
     long pressDuration = releasedTime - pressedTime;
     if (pressDuration < PRESS_TIME) {
       Serial.println("A short press is detected");
-      if (timeSetMode > 0) Serial.printf("Advancing the setting under the cursor for time item %d.", timeSetMode);
+      if (!displayAwake) startDisplayDimmerTimer();
+      else if (timeSetMode > TS_NONE) Serial.printf("Advancing the setting under the cursor for time item %d.", timeSetMode);
       else if (isLocked) openLid();
       else toggleMagnet(1);
     }
@@ -143,7 +188,11 @@ void loop() {
     if (pressDuration > PRESS_TIME) {
       Serial.println("A long press is detected");
       isLongDetected = true;
-      timeSetMode = (timeSetMode == 4) ? 0 : ++timeSetMode;
+      if (timeSetMode == TS_WAKE) {
+        timeSetMode = TS_NONE;
+      } else {
+        timeSetMode++;
+      }
       Serial.printf("Switching to time set mode %d.\n", timeSetMode);
     }
   }
