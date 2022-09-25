@@ -71,15 +71,15 @@ String outputNames[] = {"Open the lid",                            //o
                         "Move wrist to x",                         //w
                         "Save number of jiggles to x",             //j
                         "Save wake time as x (HHMM) - 0 = off",    //t
-                        "Save clock time as x (YYYYMMDDHHMM))",    //c
+                        "Save clock date as x (YYYYMMDD))",        //d
+                        "Save clock time as x (HHMM))",            //c
                         "Save as new open",                        //b
                         "Print all values"};                       //p
 
 void processCommand(String cmd) {
-  //commands come from AWS IoT or serial terminal
   Serial.printf("Command received: %s\n", cmd.c_str());
   String key = cmd.substring(0,1);
-  int valu = cmd.substring(1,cmd.length()-1).toInt();
+  long valu = cmd.substring(1,cmd.length()-1).toInt();
   if (key.equals("o")) openLid();   
   else if (key.equals("l")) toggleMagnet(valu);            
   else if (key.equals("s")) moveServo(SHOULDER, valu);   
@@ -87,7 +87,8 @@ void processCommand(String cmd) {
   else if (key.equals("w")) moveServo(WRIST, valu);   
   else if (key.equals("j")) saveJiggleTimes(valu);   
   else if (key.equals("t")) saveWakeTime(valu);            
-  else if (key.equals("c")) resetClockTo(valu);            
+  else if (key.equals("d")) resetDateTo(valu);            
+  else if (key.equals("c")) resetTimeTo(valu);            
   else if (key.equals("b")) saveNewOpenPosition();   
   else if (key.equals("p")) printValues();            
   else Serial.printf("Unrecognized input: no values will be changed\n");
@@ -99,15 +100,20 @@ void startDisplayDimmerTimer() {
   Serial.printf("Now: %d, sleep set for: %d\n", millis(), sleepDisplayAt);
 }
 
-void resetClockTo(int valu) {
-  //YYYYMMDDHHMM
+void resetDateTo(long valu) {
   String cmd = String(valu);
   int yr = cmd.substring(0,4).toInt();
   int mo = cmd.substring(4,6).toInt();
-  int dd = cmd.substring(6,8).toInt();
-  int hr = cmd.substring(8,10).toInt();
-  int mn = cmd.substring(10,12).toInt();
-  setTime(hr,mn,0,dd,mo,yr);
+  int dd = cmd.substring(6,8).toInt();  
+  setTime(hour(),minute(),0,dd,mo,yr);
+}
+
+void resetTimeTo(long valu) {
+  String cmd = String(valu);
+  int hr = cmd.substring(0,2).toInt();
+  int mn = cmd.substring(2,4).toInt();
+  setTime(hr,mn,0,day(),month(),year());
+//  Serial.printf("valu:%d yr:%d mo%d dd%d hr%d mn%d\n", valu, yr, mo, dd, hr, mn);
 }
 
 time_t getTeensy3Time() {
