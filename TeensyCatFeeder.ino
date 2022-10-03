@@ -63,7 +63,7 @@ bool isLocked = false;
 bool displayAwake = true;
 bool doneForToday = false;
 
-String inputChars = "olsewjtcbp";
+String inputChars = "olsewjtdcbp";
 String outputNames[] = {"Open the lid",                            //o
                         "Lock or unlock magnet (1 or 0)",          //l
                         "Move shoulder to x",                      //s
